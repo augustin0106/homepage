@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊戲中心</title>
+    <!-- 使用 Tailwind CSS 進行快速樣式設計 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 使用 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* 自定義滾動條樣式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4f46e5;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4338ca;
+        }
+        
+        .game-card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+        }
+        
+        /* Iframe 容器樣式，確保填滿剩餘空間 */
+        .iframe-container {
+            height: calc(100vh - 64px); /* 減去頂部導航欄高度 */
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-sans overflow-hidden">
+
+    <!-- 頂部導航欄 -->
+    <nav class="bg-gray-800 border-b border-gray-700 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-50 relative">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="goToHome()">
+            <i data-lucide="gamepad-2" class="text-indigo-500 w-8 h-8"></i>
+            <span class="text-xl font-bold tracking-wider">GAME CENTER</span>
+        </div>
+        <div id="nav-actions" class="hidden">
+            <button onclick="goToHome()" class="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors text-sm">
+                <i data-lucide="home" class="w-4 h-4"></i>
+                回首頁
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主要內容區 -->
+    <main class="relative h-[calc(100vh-64px)] overflow-hidden">
+        
+        <!-- 1. 首頁 (遊戲選單) -->
+        <div id="home-view" class="absolute inset-0 overflow-y-auto p-6 transition-all duration-300 transform opacity-100 z-10">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-12 mt-8">
+                    <h1 class="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">
+                        選擇您的遊戲
+                    </h1>
+                    <p class="text-gray-400 text-lg">探索我們精選的本地 HTML 遊戲系列</p>
+                </div>
+
+                <!-- 遊戲卡片網格 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 px-4" id="game-grid">
+                    <!-- 遊戲卡片將由 JS 動態生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 遊戲視圖 (Iframe 容器) -->
+        <div id="game-view" class="absolute inset-0 bg-black transform translate-x-full transition-transform duration-300 z-20 flex flex-col">
+            <!-- 載入中提示 -->
+            <div id="loader" class="absolute inset-0 flex items-center justify-center bg-gray-900 z-0">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500"></div>
+            </div>
+            
+            <!-- 遊戲 Iframe -->
+            <iframe id="game-frame" class="iframe-container z-10 border-0" allowfullscreen></iframe>
+        </div>
+
+    </main>
+
+    <script>
+        // 初始化 Icons
+        lucide.createIcons();
+
+        // ==========================================
+        // 設定區域 (Configuration)
+        // ==========================================
+        
+        // ★★★ 重要：如果您有真實的本地檔案，請將此變數設為 false ★★★
+        const isDemoMode = true; 
+
+        // 定義您的遊戲檔案路徑與資訊
+        const games = [
+            {
+                id: 'game1',
+                title: '太空戰機',
+                description: '經典的捲軸射擊遊戲，在宇宙中對抗外星艦隊。',
+                file: './game1.html', 
+                color: 'from-blue-500 to-cyan-400',
+                icon: 'rocket'
+            },
+            {
+                id: 'game2',
+                title: '迷宮探險',
+                description: '在錯綜複雜的迷宮中尋找寶藏並逃脫。',
+                file: './game2.html',
+                color: 'from-emerald-500 to-green-400',
+                icon: 'map'
+            },
+            {
+                id: 'game3',
+                title: '方塊益智',
+                description: '考驗腦力的方塊消除遊戲，挑戰最高分。',
+                file: './game3.html',
+                color: 'from-orange-500 to-yellow-400',
+                icon: 'box'
+            },
+            {
+                id: 'game4',
+                title: '極速賽車',
+                description: '油門踩到底！體驗極速快感的賽車模擬。',
+                file: './game4.html',
+                color: 'from-purple-500 to-pink-400',
+                icon: 'car'
+            }
+        ];
+
+        // ==========================================
+        // 核心邏輯 (Logic)
+        // ==========================================
+
+        const homeView = document.getElementById('home-view');
+        const gameView = document.getElementById('game-view');
+        const gameFrame = document.getElementById('game-frame');
+        const navActions = document.getElementById('nav-actions');
+        const loader = document.getElementById('loader');
+
+        // 生成首頁卡片
+        function renderGameCards() {
+            const grid = document.getElementById('game-grid');
+            grid.innerHTML = games.map(game => `
+                <div onclick="navigateToGame('${game.id}')" 
+                     class="game-card-hover bg-gray-800 rounded-xl overflow-hidden cursor-pointer border border-gray-700 transition-all duration-300 flex flex-col h-full group">
+                    
+                    <div class="h-40 bg-gradient-to-br ${game.color} flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-black opacity-10 group-hover:opacity-0 transition-opacity"></div>
+                        <i data-lucide="${game.icon}" class="text-white w-16 h-16 drop-shadow-lg transform group-hover:scale-110 transition-transform duration-300"></i>
+                    </div>
+
+                    <div class="p-6 flex-1 flex flex-col">
+                        <h3 class="text-xl font-bold mb-2 group-hover:text-indigo-400 transition-colors">${game.title}</h3>
+                        <p class="text-gray-400 text-sm mb-4 flex-1">${game.description}</p>
+                        <button class="w-full py-2 bg-gray-700 hover:bg-indigo-600 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                            開始遊戲
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            lucide.createIcons();
+        }
+
+        // 路由處理：根據 Hash 切換視圖
+        function handleRouting() {
+            const hash = window.location.hash.replace('#', '');
+            
+            if (hash && games.find(g => g.id === hash)) {
+                // 進入遊戲模式
+                const game = games.find(g => g.id === hash);
+                showGame(game);
+            } else {
+                // 回到首頁
+                showHomeView();
+            }
+        }
+
+        // 顯示遊戲畫面
+        function showGame(game) {
+            // UI 動畫與切換
+            homeView.style.transform = 'scale(0.95)';
+            homeView.style.opacity = '0';
+            setTimeout(() => homeView.classList.add('hidden'), 300);
+
+            gameView.classList.remove('hidden');
+            // 強制重繪以觸發過渡動畫
+            void gameView.offsetWidth; 
+            gameView.style.transform = 'translateX(0)';
+            
+            navActions.classList.remove('hidden');
+
+            // 設定 Iframe 來源
+            // 如果是演示模式，生成假的內容；否則載入真實檔案
+            if (isDemoMode) {
+                const demoContent = `
+                    <body style="background:#111827; color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; margin:0;">
+                        <h1 style="font-size:3rem; margin-bottom:1rem;">${game.title}</h1>
+                        <p>這是演示畫面。請將 index.html 中的 <code>isDemoMode</code> 設為 false 以讀取 <code>${game.file}</code>。</p>
+                        <div style="margin-top:20px; padding:20px; background:#1f2937; border-radius:10px;">
+                            <p>遊戲 ID: ${game.id}</p>
+                            <p>檔案路徑: ${game.file}</p>
+                        </div>
+                    </body>
+                `;
+                gameFrame.srcdoc = demoContent;
+                gameFrame.src = "";
+            } else {
+                gameFrame.removeAttribute('srcdoc');
+                gameFrame.src = game.file;
+            }
+
+            // 處理載入狀態
+            loader.style.display = 'flex';
+            gameFrame.onload = () => {
+                loader.style.display = 'none';
+            };
+        }
+
+        // 顯示首頁畫面
+        function showHomeView() {
+            // 清除 Hash
+            if (window.location.hash) {
+                history.pushState("", document.title, window.location.pathname + window.location.search);
+            }
+
+            // 清空 Iframe 以停止遊戲聲音或運算
+            gameFrame.src = 'about:blank';
+            gameFrame.removeAttribute('srcdoc');
+
+            // UI 動畫與切換
+            gameView.style.transform = 'translateX(100%)';
+            navActions.classList.add('hidden');
+
+            homeView.classList.remove('hidden');
+            // 強制重繪
+            void homeView.offsetWidth;
+            homeView.style.transform = 'scale(1)';
+            homeView.style.opacity = '1';
+        }
+
+        // 導航函數
+        function navigateToGame(gameId) {
+            window.location.hash = gameId;
+        }
+
+        function goToHome() {
+            window.location.hash = '';
+            // 手動觸發以防 hash 已經是空的情況
+            handleRouting(); 
+        }
+
+        // 監聽 Hash 變化 (處理瀏覽器上一頁/下一頁)
+        window.addEventListener('hashchange', handleRouting);
+
+        // 初始化
+        renderGameCards();
+        handleRouting(); // 處理初始載入時可能有 hash 的情況
+
+    </script>
+</body>
+</html>
