@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>化學離子大師 by 駿佾師</title>
+    <title>化學離子大師 by駿佾師</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
@@ -109,7 +109,7 @@
 
         // --- 設定區 ---
         // 您提供的 Google Apps Script 網址
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxaXvA7JBqkniaOxtL5utSpaxBsWKESu8Qa8emBtdKOZ-mWDC2Fb8PQ9F_z0uTjZmPm/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbz6WfGTvyNoG-bgZt8ecaTOHWmRzbLcUqoCjWsFUUyUtFpX32cHLnWX0Tg6zk7SA7Cf/exec";
 
         // --- 資料設定 (基於上傳的PDF整理) ---
         const IONS_DB = [
@@ -239,8 +239,13 @@
             const [scoreData, setScoreData] = useState({ l1Time: 0, l2Time: 0, totalTime: 0 });
             const [leaderboard, setLeaderboard] = useState([]);
             
+            // 防止重複提交 Ref
+            const isSubmittingRef = useRef(false);
+            
             const handleStart = (userData) => {
                 setUser(userData);
+                // 重置提交狀態
+                isSubmittingRef.current = false;
                 setGameState('level1');
             };
 
@@ -256,6 +261,10 @@
             };
 
             const submitScore = (totalTime) => {
+                // 如果正在提交中，則直接返回，防止重複
+                if (isSubmittingRef.current) return;
+                
+                isSubmittingRef.current = true;
                 setGameState('sending');
                 
                 // 使用 no-cors 模式進行上傳，避免跨域錯誤阻擋流程
@@ -298,13 +307,19 @@
                     setGameState('leaderboard');
                 });
             };
+            
+            // 讓首頁可以直接呼叫顯示排行榜
+            const handleShowLeaderboard = () => {
+                // 先設為載入中或其他狀態若有需要，這邊直接抓取
+                fetchLeaderboard();
+            };
 
             return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-4">
                     <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-blue-200 min-h-[600px] flex flex-col relative">
                         {/* Header */}
                         <div className="bg-blue-600 text-white p-4 flex justify-between items-center shadow-md">
-                            <h1 className="text-2xl font-bold"><i className="fa-solid fa-flask mr-2"></i>化學離子大師 by 駿佾師</h1>
+                            <h1 className="text-2xl font-bold"><i className="fa-solid fa-flask mr-2"></i>化學離子大師 by駿佾師</h1>
                             <div className="text-sm">
                                 {user.name && <span className="mr-4">學員: {user.name}</span>}
                                 {gameState === 'level1' && <span className="bg-blue-700 px-3 py-1 rounded-full">第一關：離子配對</span>}
@@ -314,7 +329,7 @@
 
                         {/* Main Content Area */}
                         <div className="flex-1 p-6 overflow-y-auto relative bg-slate-50">
-                            {gameState === 'start' && <StartScreen onStart={handleStart} />}
+                            {gameState === 'start' && <StartScreen onStart={handleStart} onShowLeaderboard={handleShowLeaderboard} />}
                             {gameState === 'level1' && <Level1 onComplete={handleLevel1Complete} />}
                             {gameState === 'level1_end' && <Level1EndScreen time={scoreData.l1Time} onNext={() => setGameState('level2')} />}
                             {gameState === 'level2' && <Level2 onComplete={handleLevel2Complete} />}
@@ -332,7 +347,7 @@
         }
 
         // --- Start Screen ---
-        function StartScreen({ onStart }) {
+        function StartScreen({ onStart, onShowLeaderboard }) {
             const [name, setName] = useState('');
             const [id, setId] = useState('');
 
@@ -406,6 +421,13 @@
                         </div>
                         <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transform active:scale-95 transition shadow-lg">
                             開始挑戰
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={onShowLeaderboard}
+                            className="w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold py-3 px-6 rounded-xl transform active:scale-95 transition shadow-lg mt-3 flex items-center justify-center"
+                        >
+                            <i className="fa-solid fa-trophy mr-2"></i>查看排行榜
                         </button>
                     </form>
                 </div>
@@ -535,6 +557,9 @@
             const [feedback, setFeedback] = useState(null); // { cation: bool, anion: bool, count: bool }
             const [startTime] = useState(Date.now());
             const [correctCount, setCorrectCount] = useState(0);
+            
+            // 防止答對後的重複點擊
+            const [isProcessing, setIsProcessing] = useState(false);
 
             // 初始化題目 (10題)
             useEffect(() => {
@@ -546,6 +571,8 @@
 
             const handleSubmit = () => {
                 if (!selectedCation || !selectedAnion) return;
+                // 如果正在處理過關動畫，禁止重複點擊
+                if (isProcessing) return;
 
                 const isCationCorrect = selectedCation.id === currentQ.cation.id;
                 const isAnionCorrect = selectedAnion.id === currentQ.anion.id;
@@ -559,16 +586,20 @@
                 });
 
                 if (isCationCorrect && isAnionCorrect && isCountCorrect) {
-                    // Correct!
+                    // Correct! 鎖定按鈕
+                    setIsProcessing(true);
+                    
                     setTimeout(() => {
                         if (currentIndex + 1 >= questions.length) {
                             const timeSpent = Math.floor((Date.now() - startTime) / 1000);
                             onComplete(timeSpent);
+                            // 注意：這裡不解除 isProcessing，因為馬上要跳轉了，防止跳轉前被點
                         } else {
                             // Next question
                             setCorrectCount(p => p + 1);
                             setCurrentIndex(p => p + 1);
                             resetSelection();
+                            setIsProcessing(false); // 解除鎖定
                         }
                     }, 1000);
                 }
@@ -656,12 +687,12 @@
                     <div className="flex justify-center pb-2">
                          <button 
                             onClick={handleSubmit}
-                            disabled={!selectedCation || !selectedAnion}
+                            disabled={!selectedCation || !selectedAnion || isProcessing}
                             className={`px-8 py-2 rounded-full font-bold text-white shadow-lg transition-all
-                                ${(!selectedCation || !selectedAnion) ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 active:scale-95'}
+                                ${(!selectedCation || !selectedAnion || isProcessing) ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 active:scale-95'}
                             `}
                         >
-                            送出答案
+                            {isProcessing ? '驗證中...' : '送出答案'}
                         </button>
                     </div>
 
@@ -716,7 +747,7 @@
                     <div className="text-center mb-6">
                         <i className="fa-solid fa-crown text-5xl text-yellow-500 mb-2"></i>
                         <h2 className="text-3xl font-bold text-gray-800">排行榜</h2>
-                        <p className="text-gray-600">你的總成績: <span className="font-bold text-blue-600 text-xl">{myScore}</span> 秒</p>
+                        {myScore > 0 && <p className="text-gray-600">你的總成績: <span className="font-bold text-blue-600 text-xl">{myScore}</span> 秒</p>}
                     </div>
 
                     <div className="flex-1 overflow-y-auto bg-white rounded-xl shadow-inner p-4 mb-4 border border-gray-200">
@@ -749,7 +780,7 @@
                     </div>
 
                     <button onClick={onRetry} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
-                        再玩一次
+                        {myScore > 0 ? '再玩一次' : '回到首頁'}
                     </button>
                 </div>
             );
@@ -759,5 +790,4 @@
         root.render(<App />);
     </script>
 </body>
-
 </html>
