@@ -3,265 +3,309 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>遊戲中心</title>
-    <!-- 使用 Tailwind CSS 進行快速樣式設計 -->
+    <title>駿佾老師的科學模擬 Happy Land</title>
+    <!-- 引入 Tailwind CSS 進行快速切版與美化 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 使用 Lucide Icons -->
+    <!-- 引入 Lucide Icons 圖示庫 -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* 自定義滾動條樣式 */
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f0fdf4; /* 淺綠色背景，充滿生機 */
+        }
+        /* 自定義捲軸樣式 */
         ::-webkit-scrollbar {
             width: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #1f2937;
+            background: #f1f1f1; 
         }
         ::-webkit-scrollbar-thumb {
-            background: #4f46e5;
+            background: #888; 
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #4338ca;
+            background: #555; 
         }
-        
-        .game-card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
-        }
-        
-        /* Iframe 容器樣式，確保填滿剩餘空間 */
-        .iframe-container {
-            height: calc(100vh - 64px); /* 減去頂部導航欄高度 */
-            width: 100%;
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out, margin 0.3s ease-in-out;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white font-sans overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden">
 
-    <!-- 頂部導航欄 -->
-    <nav class="bg-gray-800 border-b border-gray-700 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-50 relative">
-        <div class="flex items-center gap-3 cursor-pointer" onclick="goToHome()">
-            <i data-lucide="gamepad-2" class="text-indigo-500 w-8 h-8"></i>
-            <span class="text-xl font-bold tracking-wider">GAME CENTER</span>
-        </div>
-        <div id="nav-actions" class="hidden">
-            <button onclick="goToHome()" class="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors text-sm">
-                <i data-lucide="home" class="w-4 h-4"></i>
-                回首頁
-            </button>
-        </div>
-    </nav>
-
-    <!-- 主要內容區 -->
-    <main class="relative h-[calc(100vh-64px)] overflow-hidden">
-        
-        <!-- 1. 首頁 (遊戲選單) -->
-        <div id="home-view" class="absolute inset-0 overflow-y-auto p-6 transition-all duration-300 transform opacity-100 z-10">
-            <div class="max-w-7xl mx-auto">
-                <div class="text-center mb-12 mt-8">
-                    <h1 class="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">
-                        選擇您的遊戲
+    <!-- 頂部導航欄 (Header) -->
+    <header class="bg-gradient-to-r from-indigo-600 to-blue-500 text-white shadow-lg z-20 shrink-0">
+        <div class="flex items-center justify-between px-4 py-3">
+            <div class="flex items-center gap-3">
+                <!-- 手機版/桌面版 通用的收合按鈕 -->
+                <button onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-white/20 transition-colors focus:outline-none">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <div class="flex flex-col">
+                    <h1 class="text-xl md:text-2xl font-bold tracking-wider flex items-center gap-2">
+                        <i data-lucide="flask-conical" class="w-6 h-6 animate-pulse"></i>
+                        駿佾老師的科學模擬 Happy Land
                     </h1>
-                    <p class="text-gray-400 text-lg">探索我們精選的本地 HTML 遊戲系列</p>
+                    <span class="text-xs md:text-sm text-blue-100 opacity-90">探索科學的奧秘，從動手玩開始！</span>
                 </div>
-
-                <!-- 遊戲卡片網格 -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 px-4" id="game-grid">
-                    <!-- 遊戲卡片將由 JS 動態生成 -->
-                </div>
+            </div>
+            <!-- 右側裝飾或額外連結 -->
+            <div class="hidden md:flex items-center gap-2">
+                <span class="bg-white/20 px-3 py-1 rounded-full text-xs">Science is Fun!</span>
             </div>
         </div>
+    </header>
 
-        <!-- 2. 遊戲視圖 (Iframe 容器) -->
-        <div id="game-view" class="absolute inset-0 bg-black transform translate-x-full transition-transform duration-300 z-20 flex flex-col">
-            <!-- 載入中提示 -->
-            <div id="loader" class="absolute inset-0 flex items-center justify-center bg-gray-900 z-0">
-                <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500"></div>
-            </div>
+    <!-- 主內容區塊 (Flex Container) -->
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <!-- 左側側邊欄 (Sidebar) -->
+        <!-- 預設在桌面顯示，手機隱藏 (透過 -translate-x-full 控制) -->
+        <aside id="sidebar" class="w-80 bg-white border-r border-gray-200 flex flex-col shadow-xl sidebar-transition absolute md:relative z-10 h-full -translate-x-full md:translate-x-0">
             
-            <!-- 遊戲 Iframe -->
-            <iframe id="game-frame" class="iframe-container z-10 border-0" allowfullscreen></iframe>
-        </div>
+            <div class="p-4 bg-indigo-50 border-b border-indigo-100">
+                <h2 class="font-bold text-indigo-800 flex items-center gap-2">
+                    <i data-lucide="list-video" class="w-5 h-5"></i>
+                    模擬選單
+                </h2>
+            </div>
 
-    </main>
+            <!-- 選單列表 -->
+            <div id="menu-list" class="flex-1 overflow-y-auto p-3 space-y-3">
+                <!-- Javascript 會在這裡動態生成按鈕 -->
+            </div>
+
+            <!-- 側邊欄底部 -->
+            <div class="p-4 border-t border-gray-200 text-center text-xs text-gray-500 bg-gray-50">
+                &copy; 駿佾老師科學教室
+            </div>
+        </aside>
+
+        <!-- 右側主畫面 (Main Content) -->
+        <main class="flex-1 flex flex-col relative bg-gray-100 w-full">
+            <!-- 遮罩 (僅在手機版側邊欄打開時顯示) -->
+            <div id="overlay" onclick="toggleSidebar()" class="absolute inset-0 bg-black/50 z-0 hidden md:hidden"></div>
+
+            <!-- 模擬標題列 -->
+            <div class="bg-white px-6 py-3 border-b border-gray-200 flex justify-between items-center shadow-sm">
+                <h2 id="current-title" class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-5 h-5 text-yellow-500"></i>
+                    歡迎來到科學樂園
+                </h2>
+                <button onclick="reloadIframe()" class="text-sm text-gray-500 hover:text-indigo-600 flex items-center gap-1">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> 重整
+                </button>
+            </div>
+
+            <!-- Iframe 容器 -->
+            <div class="flex-1 p-2 md:p-4 overflow-hidden">
+                <div class="w-full h-full bg-white rounded-xl shadow-inner border-4 border-indigo-100 relative overflow-hidden">
+                    <!-- 預設歡迎畫面 -->
+                    <div id="welcome-screen" class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-gradient-to-br from-blue-50 to-indigo-50">
+                        <i data-lucide="microscope" class="w-24 h-24 text-indigo-300 mb-6"></i>
+                        <h3 class="text-2xl font-bold text-gray-700 mb-2">準備好開始科學探險了嗎？</h3>
+                        <p class="text-gray-500 max-w-md">請點擊左側選單選擇一個模擬主題，讓我們一起在互動中學習！</p>
+                    </div>
+
+                    <!-- 實際 Iframe -->
+                    <iframe id="simulation-frame" class="w-full h-full hidden" frameborder="0" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                </div>
+            </div>
+        </main>
+    </div>
 
     <script>
-        // 初始化 Icons
-        lucide.createIcons();
-
         // ==========================================
-        // 設定區域 (Configuration)
+        //  設定區域：請將您的網址填入下方的 url 欄位中
         // ==========================================
-        
-        // ★★★ 重要：如果您有真實的本地檔案，請將此變數設為 false ★★★
-        const isDemoMode = false; 
-
-        // 定義您的遊戲檔案路徑與資訊
-        const games = [
+        const simulations = [
             {
-                id: 'game1',
-                title: '太空戰機',
-                description: '經典的捲軸射擊遊戲，在宇宙中對抗外星艦隊。',
-                file: './game1.html', 
-                color: 'from-blue-500 to-cyan-400',
-                icon: 'rocket'
+                id: 1,
+                title: "元素大師",
+                desc: "考驗你的元素中文與代號對應、週期表排序與離子配對！",
+                icon: "atom", // Lucide icon name
+                color: "text-blue-500",
+                bg: "bg-blue-50",
+                url: "http://home.teacheraugustw.dpdns.org/element" // 【在此貼上網址 1】
             },
             {
-                id: 'game2',
-                title: '迷宮探險',
-                description: '在錯綜複雜的迷宮中尋找寶藏並逃脫。',
-                file: './game2.html',
-                color: 'from-emerald-500 to-green-400',
-                icon: 'map'
+                id: 2,
+                title: "離子與化合物大師",
+                desc: "挑戰離子價數表與組合電中性化合物！",
+                icon: "flask-conical",
+                color: "text-purple-500",
+                bg: "bg-purple-50",
+                url: "" // 【在此貼上網址 2】
             },
             {
-                id: 'game3',
-                title: '方塊益智',
-                description: '考驗腦力的方塊消除遊戲，挑戰最高分。',
-                file: './game3.html',
-                color: 'from-orange-500 to-yellow-400',
-                icon: 'box'
+                id: 3,
+                title: "石墨導電原理模擬",
+                desc: "為什麼石墨會導電而鑽石不會？",
+                icon: "zap",
+                color: "text-yellow-500",
+                bg: "bg-yellow-50",
+                url: "" // 【在此貼上網址 3】
             },
             {
-                id: 'game4',
-                title: '極速賽車',
-                description: '油門踩到底！體驗極速快感的賽車模擬。',
-                file: './game4.html',
-                color: 'from-purple-500 to-pink-400',
-                icon: 'car'
+                id: 4,
+                title: "地震搖晃方向分析",
+                desc: "114年第二次模模考題目進階探討。",
+                icon: "activity",
+                color: "text-red-500",
+                bg: "bg-red-50",
+                url: "" // 【在此貼上網址 4】
+            },
+            {
+                id: 5,
+                title: "浮空投影",
+                desc: "討論 Hologram 成像位置與最高點。",
+                icon: "box",
+                color: "text-teal-500",
+                bg: "bg-teal-50",
+                url: "" // 【在此貼上網址 5】
+            },
+            {
+                id: 6,
+                title: "光反射題型",
+                desc: "常見雙反射魚尾題，角度如何改變？",
+                icon: "sun",
+                color: "text-orange-500",
+                bg: "bg-orange-50",
+                url: "" // 【在此貼上網址 6】
             }
         ];
 
         // ==========================================
-        // 核心邏輯 (Logic)
+        //  程式邏輯區
         // ==========================================
 
-        const homeView = document.getElementById('home-view');
-        const gameView = document.getElementById('game-view');
-        const gameFrame = document.getElementById('game-frame');
-        const navActions = document.getElementById('nav-actions');
-        const loader = document.getElementById('loader');
+        const menuList = document.getElementById('menu-list');
+        const simulationFrame = document.getElementById('simulation-frame');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const currentTitle = document.getElementById('current-title');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        
+        let isMobile = window.innerWidth < 768;
 
-        // 生成首頁卡片
-        function renderGameCards() {
-            const grid = document.getElementById('game-grid');
-            grid.innerHTML = games.map(game => `
-                <div onclick="navigateToGame('${game.id}')" 
-                     class="game-card-hover bg-gray-800 rounded-xl overflow-hidden cursor-pointer border border-gray-700 transition-all duration-300 flex flex-col h-full group">
-                    
-                    <div class="h-40 bg-gradient-to-br ${game.color} flex items-center justify-center relative overflow-hidden">
-                        <div class="absolute inset-0 bg-black opacity-10 group-hover:opacity-0 transition-opacity"></div>
-                        <i data-lucide="${game.icon}" class="text-white w-16 h-16 drop-shadow-lg transform group-hover:scale-110 transition-transform duration-300"></i>
+        // 初始化選單
+        function initMenu() {
+            menuList.innerHTML = '';
+            simulations.forEach(sim => {
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left p-3 rounded-xl transition-all duration-200 hover:shadow-md group border border-transparent hover:border-indigo-200 ${sim.bg} mb-2`;
+                btn.onclick = () => loadSimulation(sim);
+                
+                btn.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <div class="p-2 bg-white rounded-full shadow-sm shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="${sim.icon}" class="w-6 h-6 ${sim.color}"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 group-hover:text-indigo-700">${sim.title}</h3>
+                            <p class="text-xs text-gray-500 mt-1 leading-relaxed line-clamp-2">${sim.desc}</p>
+                        </div>
                     </div>
-
-                    <div class="p-6 flex-1 flex flex-col">
-                        <h3 class="text-xl font-bold mb-2 group-hover:text-indigo-400 transition-colors">${game.title}</h3>
-                        <p class="text-gray-400 text-sm mb-4 flex-1">${game.description}</p>
-                        <button class="w-full py-2 bg-gray-700 hover:bg-indigo-600 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm">
-                            <i data-lucide="play" class="w-4 h-4"></i>
-                            開始遊戲
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-            
+                `;
+                menuList.appendChild(btn);
+            });
+            // 重新渲染圖示
             lucide.createIcons();
         }
 
-        // 路由處理：根據 Hash 切換視圖
-        function handleRouting() {
-            const hash = window.location.hash.replace('#', '');
-            
-            if (hash && games.find(g => g.id === hash)) {
-                // 進入遊戲模式
-                const game = games.find(g => g.id === hash);
-                showGame(game);
-            } else {
-                // 回到首頁
-                showHomeView();
-            }
-        }
+        // 載入模擬分頁
+        function loadSimulation(sim) {
+            // 更新標題
+            currentTitle.innerHTML = `
+                <i data-lucide="${sim.icon}" class="w-5 h-5 ${sim.color}"></i>
+                ${sim.title}
+            `;
+            lucide.createIcons();
 
-        // 顯示遊戲畫面
-        function showGame(game) {
-            // UI 動畫與切換
-            homeView.style.transform = 'scale(0.95)';
-            homeView.style.opacity = '0';
-            setTimeout(() => homeView.classList.add('hidden'), 300);
+            // 切換顯示
+            welcomeScreen.classList.add('hidden');
+            simulationFrame.classList.remove('hidden');
 
-            gameView.classList.remove('hidden');
-            // 強制重繪以觸發過渡動畫
-            void gameView.offsetWidth; 
-            gameView.style.transform = 'translateX(0)';
-            
-            navActions.classList.remove('hidden');
-
-            // 設定 Iframe 來源
-            // 如果是演示模式，生成假的內容；否則載入真實檔案
-            if (isDemoMode) {
-                const demoContent = `
-                    <body style="background:#111827; color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; margin:0;">
-                        <h1 style="font-size:3rem; margin-bottom:1rem;">${game.title}</h1>
-                        <p>這是演示畫面。請將 index.html 中的 <code>isDemoMode</code> 設為 false 以讀取 <code>${game.file}</code>。</p>
-                        <div style="margin-top:20px; padding:20px; background:#1f2937; border-radius:10px;">
-                            <p>遊戲 ID: ${game.id}</p>
-                            <p>檔案路徑: ${game.file}</p>
-                        </div>
+            // 處理網址 (如果沒有填寫網址，顯示提示畫面)
+            if (!sim.url || sim.url.trim() === "") {
+                const placeholderContent = `
+                    <body style="margin:0; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#f9fafb; font-family:sans-serif; color:#4b5563;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        <h2 style="margin-top:20px;">連結尚未設定</h2>
+                        <p>請在程式碼的 <code>simulations</code> 變數中填入對應的網址。</p>
                     </body>
                 `;
-                gameFrame.srcdoc = demoContent;
-                gameFrame.src = "";
+                simulationFrame.srcdoc = placeholderContent;
+                simulationFrame.removeAttribute('src');
             } else {
-                gameFrame.removeAttribute('srcdoc');
-                gameFrame.src = game.file;
+                simulationFrame.removeAttribute('srcdoc');
+                simulationFrame.src = sim.url;
             }
 
-            // 處理載入狀態
-            loader.style.display = 'flex';
-            gameFrame.onload = () => {
-                loader.style.display = 'none';
-            };
-        }
-
-        // 顯示首頁畫面
-        function showHomeView() {
-            // 清除 Hash
-            if (window.location.hash) {
-                history.pushState("", document.title, window.location.pathname + window.location.search);
+            // 如果是手機版，點擊後自動收合選單
+            if (window.innerWidth < 768) {
+                closeSidebar();
             }
-
-            // 清空 Iframe 以停止遊戲聲音或運算
-            gameFrame.src = 'about:blank';
-            gameFrame.removeAttribute('srcdoc');
-
-            // UI 動畫與切換
-            gameView.style.transform = 'translateX(100%)';
-            navActions.classList.add('hidden');
-
-            homeView.classList.remove('hidden');
-            // 強制重繪
-            void homeView.offsetWidth;
-            homeView.style.transform = 'scale(1)';
-            homeView.style.opacity = '1';
         }
 
-        // 導航函數
-        function navigateToGame(gameId) {
-            window.location.hash = gameId;
+        // 重整 iframe
+        function reloadIframe() {
+            if (!simulationFrame.classList.contains('hidden')) {
+                simulationFrame.src = simulationFrame.src;
+            }
         }
 
-        function goToHome() {
-            window.location.hash = '';
-            // 手動觸發以防 hash 已經是空的情況
-            handleRouting(); 
+        // 側邊欄控制
+        function toggleSidebar() {
+            const isSidebarOpen = !sidebar.classList.contains('-translate-x-full');
+            
+            if (window.innerWidth < 768) {
+                // 手機版行為：滑動出現/消失，並切換遮罩
+                sidebar.classList.toggle('-translate-x-full');
+                overlay.classList.toggle('hidden');
+            } else {
+                // 桌面版行為：推擠內容或隱藏
+                if (isSidebarOpen) {
+                    sidebar.classList.add('-translate-x-full'); // 隱藏
+                    sidebar.classList.remove('md:translate-x-0'); // 移除強制顯示
+                    sidebar.style.position = 'absolute'; // 避免佔位
+                } else {
+                    sidebar.classList.remove('-translate-x-full'); // 顯示
+                    sidebar.classList.add('md:translate-x-0');
+                    sidebar.style.position = 'relative'; // 恢復佔位
+                }
+            }
         }
 
-        // 監聽 Hash 變化 (處理瀏覽器上一頁/下一頁)
-        window.addEventListener('hashchange', handleRouting);
+        function closeSidebar() {
+            if (window.innerWidth < 768) {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
 
-        // 初始化
-        renderGameCards();
-        handleRouting(); // 處理初始載入時可能有 hash 的情況
+        // 監聽視窗大小改變
+        window.addEventListener('resize', () => {
+            const newIsMobile = window.innerWidth < 768;
+            if (isMobile !== newIsMobile) {
+                isMobile = newIsMobile;
+                // 重置樣式以避免 layout 錯亂
+                sidebar.style.position = '';
+                if (!isMobile) {
+                    sidebar.classList.remove('-translate-x-full');
+                    sidebar.classList.add('md:translate-x-0');
+                    overlay.classList.add('hidden');
+                } else {
+                    sidebar.classList.add('-translate-x-full');
+                }
+            }
+        });
+
+        // 啟動
+        initMenu();
 
     </script>
 </body>
